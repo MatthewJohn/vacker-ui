@@ -98,15 +98,15 @@ class Photo extends Component {
   };
 
   getBaseItemUrl = () => {
-    if (this.props.type == 'media') {
+    if (this.props.type === 'media') {
       return this.props.getBaseApiUrl() + '/media/' + this.props.id;
-    } else if (this.props.type == 'set') {
+    } else if (this.props.type === 'set') {
       return this.props.getBaseApiUrl() + '/sets/' + this.props.id;
-    } else if (this.props.type == 'year') {
+    } else if (this.props.type === 'year') {
       return this.props.getBaseApiUrl() + '/years/' + this.props.id;
-    } else if (this.props.type == 'month') {
+    } else if (this.props.type === 'month') {
       return this.props.getBaseApiUrl() + '/years/' + this.props.selected_year + '/months/' + this.props.id;
-    } else if (this.props.type == 'day') {
+    } else if (this.props.type === 'day') {
       return this.props.getBaseApiUrl() + '/years/' + this.props.selected_year + '/months/' + this.props.selected_month + '/days/' + this.props.id;
     }
   }
@@ -186,15 +186,18 @@ class PhotoViewer extends Component {
 };
 
 class Breadcrumb extends Component {
+  set_filter = () => {
+    this.props.updateSelected(this.props.type, this.props.selected_value)
+  }
   render() {
     if (this.props.selected_name) {
-      if (this.props.type == 'year') {
-        return (<a className="section">{this.props.selected_name}</a>);
+      if (this.props.type === 'year') {
+        return (<a className="section" onClick={this.set_filter}>{this.props.selected_name}</a>);
       } else {
         return (
           <div>
             <div className="divider"> / </div>
-            <a className="section">{this.props.selected_name}</a>
+            <a className="section" onClick={this.set_filter}>{this.props.selected_name}</a>
           </div>
         );
       }
@@ -205,13 +208,17 @@ class Breadcrumb extends Component {
 }
 
 class TopMenu extends Component {
+  clear_filters = () => {
+    this.props.updateSelected(null, null);
+  }
   render() {
     return (
       <div className="ui breadcrumb">
-        <Breadcrumb type='year' selected_name={this.props.selected_year} />
-        <Breadcrumb type='month' selected_name={this.props.selected_month} />
-        <Breadcrumb type='day' selected_name={this.props.selected_day} />
-        <Breadcrumb type='set' selected_name={this.props.selected_set} />
+        <a onClick={this.clear_filters} className="section"> / </a>
+        <Breadcrumb type='year' updateSelected={this.props.updateSelected} selected_name={this.props.selected_year} selected_value={this.props.selected_year} />
+        <Breadcrumb type='month' updateSelected={this.props.updateSelected} selected_name={this.props.selected_month} selected_value={this.props.selected_month} />
+        <Breadcrumb type='day' updateSelected={this.props.updateSelected} selected_name={this.props.selected_day} selected_value={this.props.selected_day} />
+        <Breadcrumb type='set' updateSelected={this.props.updateSelected} selected_name={this.props.selected_set} selected_value={this.props.selected_set} />
       </div>
     );
   };
@@ -234,21 +241,26 @@ class App extends Component {
   updateSelected = (type, id) => {
 
     this.setState((previousState) => {
-      if (type == 'day') {
+      if (type === 'day') {
         previousState['selected_set'] = null;
         previousState['shown_type'] = 'set';
-      }
-      if (type == 'month') {
+      } else if (type === 'month') {
         previousState['selected_set'] = null;
         previousState['selected_day'] = null;
         previousState['shown_type'] = 'day';
-      }
-      if (type == 'year') {
+      } else if (type === 'year') {
         previousState['selected_set'] = null;
         previousState['selected_day'] = null;
         previousState['selected_month'] = null;
         previousState['shown_type'] = 'month';
+      } else if (type === null) {
+        previousState['selected_set'] = null;
+        previousState['selected_day'] = null;
+        previousState['selected_month'] = null;
+        previousState['selected_year'] = null;
+        previousState['shown_type'] = 'year';
       }
+
       previousState['selected_' + type] = id;
       return previousState;
     }, () => {
@@ -258,10 +270,12 @@ class App extends Component {
 
   updateObjectIds = () => {
     let get_url = '';
-    if (this.state.shown_type == 'year') {
+    if (this.state.shown_type === 'year') {
       get_url = '/years'
-    } else if (this.state.shown_type == 'month') {
+    } else if (this.state.shown_type === 'month') {
       get_url = '/years/' + this.state.selected_year + '/months'
+    } else if (this.state.shown_type === 'day') {
+      get_url = '/years/' + this.state.selected_year + '/months/' + this.state.selected_month + '/days'
     }
     fetch(this.getBaseApiUrl() + get_url)
       .then(res => res.json())
