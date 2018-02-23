@@ -3,7 +3,7 @@ import logo from './logo.svg';
 import './App.css';
 
 import 'semantic-ui-css/semantic.min.css';
-import { Card, Icon, Image } from 'semantic-ui-react'
+import { Card, Icon, Image, Menu, MenuItem } from 'semantic-ui-react'
 
 
 class PhotoIcon extends Component {
@@ -172,7 +172,7 @@ class PhotoViewer extends Component {
 
   render() {
     return (
-      <div className="ui three column doubling stackable grid container">
+      <div className="ui four column doubling stackable grid container">
       {this.props.shown_objects.map((obj_id) => <Photo getBaseApiUrl={this.props.getBaseApiUrl}
                                                   updateSelected={this.props.updateSelected}
                                                   type={this.props.shown_type}
@@ -195,14 +195,14 @@ class Breadcrumb extends Component {
         return (<a className="section" onClick={this.set_filter}>{this.props.selected_name}</a>);
       } else {
         return (
-          <div>
+          <span>
             <div className="divider"> / </div>
             <a className="section" onClick={this.set_filter}>{this.props.selected_name}</a>
-          </div>
+          </span>
         );
       }
     } else {
-      return (<div></div>);
+      return (null);
     }
   }
 }
@@ -213,6 +213,8 @@ class TopMenu extends Component {
   }
   render() {
     return (
+      <Menu>
+      <MenuItem>
       <div className="ui breadcrumb">
         <a onClick={this.clear_filters} className="section"> / </a>
         <Breadcrumb type='year' updateSelected={this.props.updateSelected} selected_name={this.props.selected_year} selected_value={this.props.selected_year} />
@@ -220,6 +222,8 @@ class TopMenu extends Component {
         <Breadcrumb type='day' updateSelected={this.props.updateSelected} selected_name={this.props.selected_day} selected_value={this.props.selected_day} />
         <Breadcrumb type='set' updateSelected={this.props.updateSelected} selected_name={this.props.selected_set} selected_value={this.props.selected_set} />
       </div>
+      </MenuItem>
+      </Menu>
     );
   };
 }
