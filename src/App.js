@@ -3,14 +3,35 @@ import logo from './logo.svg';
 import './App.css';
 
 import 'semantic-ui-css/semantic.min.css';
-import { Card, Icon, Image, Menu, MenuItem } from 'semantic-ui-react'
+import { Card, Icon, Image, Menu, MenuItem, Modal, Header, Segment, Grid } from 'semantic-ui-react'
+
+class ImageModal extends Component {
+  getImageUrl = () => {
+    return this.props.getBaseApiUrl() + '/photo/' + this.props.media_id + '/data';
+  };
+  render() {
+    if (this.props.media_id) {
+      return (
+        <Modal size='large' basic={true} open={true}>
+          <Modal.Header>Select a Photo</Modal.Header>
+          <Modal.Content image>
+            <Image wrapped size='big' src={this.getImageUrl()} />
+            <Modal.Description>
+              <Header>Default Profile Image</Header>
+              <p>We've found the following gravatar image associated with your e-mail address.</p>
+              <p>Is it okay to use this photo?</p>
+            </Modal.Description>
+          </Modal.Content>
+        </Modal>
+      );
+    } else {
+      return (null);
+    }
+  };
+}
 
 
 class PhotoIcon extends Component {
-  state = {
-    active: false
-  };
-
   // Default methods to be overriden
   getIconName = () => {
     return 'search';
@@ -28,15 +49,17 @@ class PhotoIcon extends Component {
 
   render() {
     return (
-      <Icon bordered={true} onMouseOver={this.onMouseOver} onClick={this.onClick} name={this.getIconName()} color={this.getIconColor()}  circular />
+      <Icon bordered={true} onMouseOver={this.onMouseOver} onClick={this.props.onClick} name={this.getIconName()} color={this.getIconColor()}  circular />
     );
   }
 }
 
 class BackupIcon extends PhotoIcon {
   getIconColor = () => {
-    if (this.state.active) {
+    if (this.props.active == 2) {
       return 'blue';
+    } else if (this.props.active == 1) {
+      return 'yellow';
     } else {
       return 'grey';
     }
@@ -44,11 +67,6 @@ class BackupIcon extends PhotoIcon {
   getIconName = () => {
     return 'cloud'
   }
-  onClick = () => {
-    this.setState((previousState) => ({
-      active: !(this.state.active)
-    }))
-  };
 };
 
 class EditIcon extends PhotoIcon {
@@ -62,17 +80,12 @@ class EditIcon extends PhotoIcon {
 
 class HideIcon extends PhotoIcon {
   getIconName = () => {
-    if (this.state.active) {
+    if (this.props.active) {
       return 'hide';
     } else {
       return 'unhide'
     }
   }
-  onClick = () => {
-    this.setState((previousState) => ({
-      active: !(this.state.active)
-    }))
-  };
 }
 
 class ExpandIcon extends PhotoIcon {
@@ -91,29 +104,64 @@ class Photo extends Component {
   // - type  - Must be one of YEAR/MONTH/DAY/SET/MEDIA
 
   state = {
-    backup_state: false,
+    backup_state: 0,
     hide_state: false,
-    photo_count: 0,
+    media_count: 0,
     name: ''
   };
 
-  getBaseItemUrl = () => {
-    if (this.props.type === 'media') {
-      return this.props.getBaseApiUrl() + '/media/' + this.props.id;
-    } else if (this.props.type === 'set') {
-      return this.props.getBaseApiUrl() + '/sets/' + this.props.id;
-    } else if (this.props.type === 'year') {
-      return this.props.getBaseApiUrl() + '/years/' + this.props.id;
-    } else if (this.props.type === 'month') {
-      return this.props.getBaseApiUrl() + '/years/' + this.props.selected_year + '/months/' + this.props.id;
-    } else if (this.props.type === 'day') {
-      return this.props.getBaseApiUrl() + '/years/' + this.props.selected_year + '/months/' + this.props.selected_month + '/days/' + this.props.id;
+  getBaseItemUrl = (id, type, selected_year, selected_month) => {
+    console.log(id, type, selected_year, selected_month);
+    if (type === 'media') {
+      return this.props.getBaseApiUrl() + '/media/' + id;
+    } else if (type === 'set') {
+      return this.props.getBaseApiUrl() + '/sets/' + id;
+    } else if (type === 'year') {
+      return this.props.getBaseApiUrl() + '/years/' + id;
+    } else if (type === 'month') {
+      return this.props.getBaseApiUrl() + '/years/' + selected_year + '/months/' + id;
+    } else if (type === 'day') {
+      return this.props.getBaseApiUrl() + '/years/' + selected_year + '/months/' + selected_month + '/days/' + id;
     }
   }
 
+  componentWillMount() {
+    this.getObjectDetails(this.props.id, this.props.type, this.props.selected_year, this.props.selected_month);
+  };
+
+  componentWillReceiveProps(nextProps) {
+    this.getObjectDetails(nextProps.id, nextProps.type, nextProps.selected_year, nextProps.selected_month);
+  }
+
+  getObjectDetails = (id = null, type = null, selected_year = null, selected_month = null) => {
+    // if (id === null && type === null && selected_year === null && selected_month === null) {
+    //   id = this.props.id;
+    //   type = this.props.type;
+    //   selected_year = this.props.selected_year;
+    //   selected_month = this.props.selected_month;
+    // }
+    fetch(this.getBaseItemUrl(id, type, selected_year, selected_month))
+      .then(res => res.json())
+      .then(res => {
+        this.setState((previousState) => ({
+          name: res.name,
+          backup_state: res.backup_state,
+          media_count: res.media_count
+        }));
+      });
+  };
+
+  toggleBackup = () => {
+    fetch(this.getBaseItemUrl(this.props.id, this.props.type, this.props.selected_year, this.props.selected_month) + '/backup', {
+      method: 'POST'
+    })
+    .then(() => {
+      this.getObjectDetails(this.props.id, this.props.type, this.props.selected_year, this.props.selected_month);
+    });
+  }
+
   getThumbnailUrl = () => {
-    console.log(this.getBaseItemUrl() + '/thumbnail');
-    return this.getBaseItemUrl() + '/thumbnail';
+    return this.getBaseItemUrl(this.props.id, this.props.type, this.props.selected_year, this.props.selected_month) + '/thumbnail';
   };
 
   getDescription = () => {
@@ -121,12 +169,12 @@ class Photo extends Component {
   };
 
   getChildInformation = () => {
-    let photo_count_text = '';
+    let media_count_text = '';
     // If item has photo children, show this in the information
-    if (this.props.type != 'media' && this.state.photo_count) {
-      photo_count_text = ' (' + this.state.photo_count + ' photos)';
+    if (this.props.type != 'media' && this.state.media_count) {
+      media_count_text = ' (' + this.state.media_count + ' photos)';
     }
-    return photo_count_text;
+    return media_count_text;
   };
 
   toggleHide = () => {
@@ -149,7 +197,7 @@ class Photo extends Component {
 
   render() {
     return (
-      <div className="ui segment" style={{margin: '20px'}}>
+      <Segment style={{margin: '20px'}}>
         <Card>
           <Image onClick={this.onClick} src={this.getThumbnailUrl()} />
           <Card.Content>
@@ -157,13 +205,13 @@ class Photo extends Component {
             <Card.Meta>{this.getChildInformation()}</Card.Meta>
           </Card.Content>
           <Card.Content extra>
-            <EditIcon />
-            <BackupIcon />
-            <HideIcon />
-            <ExpandIcon />
+            <EditIcon onClick={this.editName} />
+            <BackupIcon onClick={this.toggleBackup} active={this.state.backup_state} />
+            <HideIcon onClick={this.setHide} active={this.state.hide_state} />
+            <ExpandIcon onClick={this.expand} />
           </Card.Content>
         </Card>
-      </div>
+      </Segment>
     );
   }
 }
@@ -172,14 +220,14 @@ class PhotoViewer extends Component {
 
   render() {
     return (
-      <div className="ui four column doubling stackable grid container">
+      <Grid columns={6} doubling stackable>
       {this.props.shown_objects.map((obj_id) => <Photo getBaseApiUrl={this.props.getBaseApiUrl}
                                                   updateSelected={this.props.updateSelected}
                                                   type={this.props.shown_type}
                                                   id={obj_id}
                                                   selected_year={this.props.selected_year}
                                                   selected_month={this.props.selected_month} />)}
-      </div>
+      </Grid>
     );
   };
 
@@ -238,6 +286,7 @@ class App extends Component {
     selected_month: null,
     selected_day: null,
     selected_set: null,
+    selected_media: null,
     shown_objects: [],
     shown_type: 'year'
   };
@@ -245,7 +294,9 @@ class App extends Component {
   updateSelected = (type, id) => {
 
     this.setState((previousState) => {
-      if (type === 'day') {
+      if (type == 'set') {
+        previousState['shown_type'] = 'media';
+      } else if (type === 'day') {
         previousState['selected_set'] = null;
         previousState['shown_type'] = 'set';
       } else if (type === 'month') {
@@ -275,19 +326,24 @@ class App extends Component {
   updateObjectIds = () => {
     let get_url = '';
     if (this.state.shown_type === 'year') {
-      get_url = '/years'
+      get_url = '/years';
     } else if (this.state.shown_type === 'month') {
-      get_url = '/years/' + this.state.selected_year + '/months'
+      get_url = '/years/' + this.state.selected_year + '/months';
     } else if (this.state.shown_type === 'day') {
-      get_url = '/years/' + this.state.selected_year + '/months/' + this.state.selected_month + '/days'
+      get_url = '/years/' + this.state.selected_year + '/months/' + this.state.selected_month + '/days';
+    } else if (this.state.shown_type == 'set') {
+      get_url = '/years/' + this.state.selected_year + '/months/' + this.state.selected_month + '/days/' + this.state.selected_day + '/sets';
+    } else if (this.state.shown_type == 'media') {
+      get_url = '/sets/' + this.state.selected_set + '/media';
     }
+    console.log(get_url);
     fetch(this.getBaseApiUrl() + get_url)
       .then(res => res.json())
       .then(res => {
+        console.log(res);
         this.setState(() => ({
           shown_objects: res
         }));
-        console.log('updated objects: ' + this.state.shown_type);
       });
   };
 
@@ -316,6 +372,7 @@ class App extends Component {
           shown_objects={this.state.shown_objects}
           shown_type={this.state.shown_type}
           getBaseApiUrl={this.getBaseApiUrl} />
+        <ImageModal media_id={this.state.selected_media} getBaseApiUrl={this.getBaseApiUrl} />
       </div>
     );
   }
