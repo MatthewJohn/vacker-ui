@@ -142,7 +142,7 @@ class Photo extends Component {
     if (this.props.show_hidden) {
       get_url += '?show_hidden=1';
     }
-    console.log('GET URL: ' + get_url);
+
     fetch(get_url)
       .then(res => res.json())
       .then(res => {
@@ -150,7 +150,8 @@ class Photo extends Component {
           name: res.name,
           backup_state: res.backup_state,
           media_count: res.media_count,
-          hidden_state: res.hidden_state
+          hidden_state: res.hidden_state,
+          datetime: res.datetime
         }), (callback) => {
           if (callback) {
             callback();
@@ -201,6 +202,9 @@ class Photo extends Component {
   };
 
   getChildInformation = () => {
+    if (this.props.type == 'media') {
+      return this.state.datetime;
+    }
     let media_count_text = '';
     // If item has photo children, show this in the information
     if (this.props.type != 'media' && this.state.media_count) {
