@@ -65,7 +65,7 @@ class BackupIcon extends PhotoIcon {
     }
   };
   getIconName = () => {
-    return 'cloud'
+    return 'cloud';
   }
 };
 
@@ -83,7 +83,7 @@ class HideIcon extends PhotoIcon {
     if (this.props.active == 2) {
       return 'hide';
     } else {
-      return 'unhide'
+      return 'unhide';
     }
   }
   getIconColor = () => {
@@ -222,7 +222,7 @@ class Photo extends Component {
     return (
       <Segment style={{margin: '20px'}}>
         <Card>
-          <Image onClick={this.onClick} src={this.getThumbnailUrl()} />
+          <Image style={{'object-fit': 'contain'}} onClick={this.onClick} src={this.getThumbnailUrl()} />
           <Card.Content>
             <Card.Header>{this.getDescription()}</Card.Header>
             <Card.Meta>{this.getChildInformation()}</Card.Meta>
