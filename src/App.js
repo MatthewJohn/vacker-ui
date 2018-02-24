@@ -86,6 +86,15 @@ class HideIcon extends PhotoIcon {
       return 'unhide'
     }
   }
+  getIconColor = () => {
+    if (this.props.active == 0) {
+      return 'grey';
+    } else if (this.props.active == 1) {
+      return 'yellow';
+    } else {
+      return 'red';
+    }
+  }
 }
 
 class ExpandIcon extends PhotoIcon {
@@ -159,7 +168,11 @@ class Photo extends Component {
 
   toggleBackup = () => {
     fetch(this.getBaseItemUrl(this.props.id, this.props.type, this.props.selected_year, this.props.selected_month) + '/backup', {
-      method: 'POST'
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({show_hidden: this.props.show_hidden})
     })
     .then(() => {
       this.getObjectDetails(this.props.id, this.props.type, this.props.selected_year, this.props.selected_month);
@@ -167,8 +180,13 @@ class Photo extends Component {
   }
 
   toggleHide = () => {
+    console.log(JSON.stringify({show_hidden: this.props.show_hidden}));
     fetch(this.getBaseItemUrl(this.props.id, this.props.type, this.props.selected_year, this.props.selected_month) + '/hide', {
-      method: 'POST'
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({show_hidden: this.props.show_hidden})
     })
     .then(() => {
       this.props.updateObjectIds();
@@ -176,7 +194,11 @@ class Photo extends Component {
   }
 
   getThumbnailUrl = () => {
-    return this.getBaseItemUrl(this.props.id, this.props.type, this.props.selected_year, this.props.selected_month) + '/thumbnail';
+    let base_url = this.getBaseItemUrl(this.props.id, this.props.type, this.props.selected_year, this.props.selected_month) + '/thumbnail';
+    if (this.props.show_hidden) {
+      base_url += '?show_hidden=1';
+    }
+    return base_url;
   };
 
   getDescription = () => {
