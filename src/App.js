@@ -119,37 +119,26 @@ class Photo extends Component {
     name: ''
   };
 
-  getBaseItemUrl = (id, type, selected_year, selected_month) => {
-    console.log(id, type, selected_year, selected_month);
+  getBaseItemUrl = (id, type) => {
     if (type === 'media') {
       return this.props.getBaseApiUrl() + '/media/' + id;
     } else if (type === 'set') {
       return this.props.getBaseApiUrl() + '/sets/' + id;
-    } else if (type === 'year') {
-      return this.props.getBaseApiUrl() + '/years/' + id;
-    } else if (type === 'month') {
-      return this.props.getBaseApiUrl() + '/years/' + selected_year + '/months/' + id;
-    } else if (type === 'day') {
-      return this.props.getBaseApiUrl() + '/years/' + selected_year + '/months/' + selected_month + '/days/' + id;
+    } else {
+      return this.props.getBaseApiUrl() + '/date/' + id;
     }
   }
 
   componentWillMount() {
-    this.getObjectDetails(this.props.id, this.props.type, this.props.selected_year, this.props.selected_month);
+    this.getObjectDetails(this.props.id, this.props.type);
   };
 
   componentWillReceiveProps(nextProps) {
-    this.getObjectDetails(nextProps.id, nextProps.type, nextProps.selected_year, nextProps.selected_month);
+    this.getObjectDetails(nextProps.id, nextProps.type);
   }
 
-  getObjectDetails = (id = null, type = null, selected_year = null, selected_month = null) => {
-    // if (id === null && type === null && selected_year === null && selected_month === null) {
-    //   id = this.props.id;
-    //   type = this.props.type;
-    //   selected_year = this.props.selected_year;
-    //   selected_month = this.props.selected_month;
-    // }
-    let get_url = this.getBaseItemUrl(id, type, selected_year, selected_month);
+  getObjectDetails = (id = null, type = null) => {
+    let get_url = this.getBaseItemUrl(id, type);
     if (this.props.show_hidden) {
       get_url += '?show_hidden=1';
     }
@@ -167,7 +156,7 @@ class Photo extends Component {
   };
 
   toggleBackup = () => {
-    fetch(this.getBaseItemUrl(this.props.id, this.props.type, this.props.selected_year, this.props.selected_month) + '/backup', {
+    fetch(this.getBaseItemUrl(this.props.id, this.props.type) + '/backup', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -175,13 +164,13 @@ class Photo extends Component {
       body: JSON.stringify({show_hidden: this.props.show_hidden})
     })
     .then(() => {
-      this.getObjectDetails(this.props.id, this.props.type, this.props.selected_year, this.props.selected_month);
+      this.getObjectDetails(this.props.id, this.props.type);
     });
   }
 
   toggleHide = () => {
     console.log(JSON.stringify({show_hidden: this.props.show_hidden}));
-    fetch(this.getBaseItemUrl(this.props.id, this.props.type, this.props.selected_year, this.props.selected_month) + '/hide', {
+    fetch(this.getBaseItemUrl(this.props.id, this.props.type) + '/hide', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -194,7 +183,7 @@ class Photo extends Component {
   }
 
   getThumbnailUrl = () => {
-    let base_url = this.getBaseItemUrl(this.props.id, this.props.type, this.props.selected_year, this.props.selected_month) + '/thumbnail';
+    let base_url = this.getBaseItemUrl(this.props.id, this.props.type) + '/thumbnail';
     if (this.props.show_hidden) {
       base_url += '?show_hidden=1';
     }
@@ -218,6 +207,18 @@ class Photo extends Component {
     this.props.updateSelected(this.props.type, this.props.id)
   }
 
+  getExpandIcon = () => {
+    if (this.props.type == 'year' || this.props.type == 'month' || this.props.type === 'day') {
+      return (<ExpandIcon onClick={this.expand} />);
+    } else {
+      return (null);
+    }
+  }
+
+  expand = () => {
+    this.props.updateSelected(this.props.type, this.props.id, true);
+  }
+
   render() {
     return (
       <Segment style={{margin: '20px'}}>
@@ -231,7 +232,7 @@ class Photo extends Component {
             <EditIcon onClick={this.editName} />
             <BackupIcon onClick={this.toggleBackup} active={this.state.backup_state} />
             <HideIcon onClick={this.toggleHide} active={this.state.hidden_state} />
-            <ExpandIcon onClick={this.expand} />
+            {this.getExpandIcon()}
           </Card.Content>
         </Card>
       </Segment>
@@ -248,8 +249,6 @@ class PhotoViewer extends Component {
                                                   updateSelected={this.props.updateSelected}
                                                   type={this.props.shown_type}
                                                   id={obj_id}
-                                                  selected_year={this.props.selected_year}
-                                                  selected_month={this.props.selected_month}
                                                   updateObjectIds={this.props.updateObjectIds}
                                                   show_hidden={this.props.show_hidden} />)}
       </Grid>
@@ -312,13 +311,20 @@ class App extends Component {
     shown_objects: [],
     shown_type: 'year',
     sidebar_visible: false,
-    show_hidden: false
+    show_hidden: false,
+    selected_id: null
   };
 
-  updateSelected = (type, id) => {
+  convertDateToYMD = (date_id) => {
+
+  }
+
+  updateSelected = (type, id, show_date_media = false) => {
 
     this.setState((previousState) => {
-      if (type == 'set') {
+      if (show_date_media) {
+        previousState['shown_type'] = 'media';
+      } else if (type == 'set') {
         previousState['shown_type'] = 'media';
       } else if (type === 'day') {
         previousState['selected_set'] = null;
@@ -341,33 +347,34 @@ class App extends Component {
       }
 
       previousState['selected_' + type] = id;
+      previousState['selected_id'] = id;
       return previousState;
     }, () => {
-      this.updateObjectIds();
+      this.updateObjectIds(show_date_media);
     });
   }
 
-  updateObjectIds = () => {
+  updateObjectIds = (show_date_media = false) => {
     let get_url = '';
-    if (this.state.shown_type === 'year') {
+    if (show_date_media === true) {
+      get_url = '/date/' + this.state.selected_id + '/media';
+    } else if (this.state.shown_type === 'year') {
       get_url = '/years';
     } else if (this.state.shown_type === 'month') {
-      get_url = '/years/' + this.state.selected_year + '/months';
+      get_url = '/date/' + this.state.selected_year + '/months';
     } else if (this.state.shown_type === 'day') {
-      get_url = '/years/' + this.state.selected_year + '/months/' + this.state.selected_month + '/days';
+      get_url = '/date/' + this.state.selected_month + '/days';
     } else if (this.state.shown_type == 'set') {
-      get_url = '/years/' + this.state.selected_year + '/months/' + this.state.selected_month + '/days/' + this.state.selected_day + '/sets';
+      get_url = '/date/' + this.state.selected_day + '/sets';
     } else if (this.state.shown_type == 'media') {
       get_url = '/sets/' + this.state.selected_set + '/media';
     }
     if (this.state.show_hidden) {
       get_url += '?show_hidden=1'
     }
-    console.log(get_url);
     fetch(this.getBaseApiUrl() + get_url)
       .then(res => res.json())
       .then(res => {
-        console.log(res);
         this.setState(() => ({
           shown_objects: res
         }));
@@ -407,9 +414,7 @@ class App extends Component {
           <Sidebar.Pusher>
             <PhotoViewer updateSelected={this.updateSelected}
               updateObjectIds={this.updateObjectIds}
-              selected_year={this.state.selected_year}
-              selected_month={this.state.selected_month}
-              selected_day={this.state.selected_day}
+              selected_date={this.state.selected_date}
               selected_set={this.state.selected_set}
               shown_objects={this.state.shown_objects}
               shown_type={this.state.shown_type}
