@@ -137,11 +137,12 @@ class Photo extends Component {
     this.getObjectDetails(nextProps.id, nextProps.type);
   }
 
-  getObjectDetails = (id = null, type = null) => {
+  getObjectDetails = (id = null, type = null, callback = null) => {
     let get_url = this.getBaseItemUrl(id, type);
     if (this.props.show_hidden) {
       get_url += '?show_hidden=1';
     }
+    console.log('GET URL: ' + get_url);
     fetch(get_url)
       .then(res => res.json())
       .then(res => {
@@ -150,8 +151,11 @@ class Photo extends Component {
           backup_state: res.backup_state,
           media_count: res.media_count,
           hidden_state: res.hidden_state
-        }));
-        console.log(res.hidden_state);
+        }), (callback) => {
+          if (callback) {
+            callback();
+          }
+        });
       });
   };
 
@@ -178,7 +182,9 @@ class Photo extends Component {
       body: JSON.stringify({show_hidden: this.props.show_hidden})
     })
     .then(() => {
-      this.props.updateObjectIds();
+      this.getObjectDetails(this.props.id, this.props.type, () => {
+        this.props.updateObjectIds();
+      });
     });
   }
 
@@ -369,16 +375,29 @@ class App extends Component {
     } else if (this.state.shown_type == 'media') {
       get_url = '/sets/' + this.state.selected_set + '/media';
     }
+    // Add get parameter to show hidden objects, if the option has been selected.
     if (this.state.show_hidden) {
       get_url += '?show_hidden=1'
     }
     fetch(this.getBaseApiUrl() + get_url)
       .then(res => res.json())
       .then(res => {
+        // Update state for shown objects with response from API
         this.setState(() => ({
           shown_objects: res
-        }));
+        }), () => {
+          // Descend into object, if it's the only one
+          this.checkEmptyContainer();
+        });
       });
+  };
+
+  checkEmptyContainer = () => {
+    // If only one object is on display, automatically
+    // descend into it, if it's a month, day or set
+    if (this.state.shown_objects.length === 1 && ['month', 'day', 'set'].indexOf(this.state.shown_type) !== -1) {
+      this.updateSelected(this.state.shown_type, this.state.shown_objects[0]);
+    }
   };
 
   componentWillMount() {
