@@ -3,31 +3,44 @@ import logo from './logo.svg';
 import './App.css';
 
 import 'semantic-ui-css/semantic.min.css';
-import { Card, Icon, Image, Menu, MenuItem, Modal, Header, Segment, Grid, Sidebar, Button, Checkbox } from 'semantic-ui-react'
+import { Card, Icon, Image, Menu, MenuItem, Header, Segment, Grid, Sidebar, Button, Checkbox } from 'semantic-ui-react'
+import Lightbox from 'react-image-lightbox';
 
 class ImageModal extends Component {
-  getImageUrl = () => {
-    return this.props.getBaseApiUrl() + '/media/' + this.props.media_id + '/data';
-  };
+  constructor(props) {
+    super(props);
+
+    this.state = {
+      photoIndex: 0
+    };
+  }
+
   render() {
-    if (this.props.media_id) {
-      return (
-        <Modal size='large' basic={true} open={true}>
-          <Modal.Header>Select a Photo</Modal.Header>
-          <Modal.Content image>
-            <Image wrapped size='big' src={this.getImageUrl()} />
-            <Modal.Description>
-              <Header>Default Profile Image</Header>
-              <p>We've found the following gravatar image associated with your e-mail address.</p>
-              <p>Is it okay to use this photo?</p>
-            </Modal.Description>
-          </Modal.Content>
-        </Modal>
-      );
-    } else {
-      return (null);
-    }
-  };
+    const { photoIndex } = this.state;
+
+    return (
+      <div>
+        {this.props.media_id && (
+          <Lightbox
+            mainSrc={this.props.modal_images_urls[photoIndex]}
+            nextSrc={this.props.modal_images_urls[(photoIndex + 1) % this.props.modal_images_urls.length]}
+            prevSrc={this.props.modal_images_urls[(photoIndex + this.props.modal_images_urls.length - 1) % this.props.modal_images_urls.length]}
+            onCloseRequest={() => this.props.closeModal()}
+            onMovePrevRequest={() =>
+              this.setState({
+                photoIndex: (photoIndex + this.props.modal_images_urls - 1) % this.props.modal_images_urls.length,
+              })
+            }
+            onMoveNextRequest={() =>
+              this.setState({
+                photoIndex: (photoIndex + 1) % this.props.modal_images_urls.length,
+              })
+            }
+          />
+        )}
+      </div>
+    );
+  }
 }
 
 
@@ -173,9 +186,8 @@ class Photo extends Component {
     });
   }
 
-  toggleHide = () => {
-    console.log(JSON.stringify({show_hidden: this.props.show_hidden}));
-    fetch(this.getBaseItemUrl(this.props.id, this.props.type) + '/hide', {
+  toggleHide = () => { 
+   fetch(this.getBaseItemUrl(this.props.id, this.props.type) + '/hide', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -322,7 +334,8 @@ class App extends Component {
     shown_type: 'year',
     sidebar_visible: false,
     show_hidden: false,
-    selected_id: null
+    selected_id: null,
+    modal_images_urls: []
   };
 
   convertDateToYMD = (date_id) => {
@@ -390,10 +403,26 @@ class App extends Component {
         this.setState(() => ({
           shown_objects: res
         }), () => {
+          if (this.state.shown_type == 'media') {
+            this.updateImageUrls();
+          }
           // Descend into object, if it's the only one
           this.checkEmptyContainer();
         });
       });
+  };
+
+    getImageUrl = () => {
+    return ;
+  };
+
+  updateImageUrls = () => {
+    let image_urls = [];
+    this.state.shown_objects.forEach((media_id) => {
+      image_urls.push(this.getBaseApiUrl() + '/media/' + media_id + '/data')
+    });
+    console.log(image_urls);
+    this.setState({modal_images_urls: image_urls});
   };
 
   checkEmptyContainer = () => {
@@ -408,13 +437,17 @@ class App extends Component {
     this.updateObjectIds();
   };
 
-  getBaseApiUrl = () => { return 'http://localhost:5000' };
+  getBaseApiUrl = () => { return 'http://192.168.0.20:5000' };
 
   toggleSideBar = () => this.setState({ sidebar_visible: !this.state.sidebar_visible });
   toggleShowHidden = () => {
     this.setState({ show_hidden: !this.state.show_hidden }, () => {
       this.updateObjectIds();
     });
+  };
+
+  closeModal = () => {
+    this.setState({selected_media: false});
   };
 
   render() {
@@ -446,7 +479,7 @@ class App extends Component {
           </Sidebar.Pusher>
         </Sidebar.Pushable>
 
-        <ImageModal media_id={this.state.selected_media} getBaseApiUrl={this.getBaseApiUrl} />
+        <ImageModal modal_images_urls={this.state.modal_images_urls} media_id={this.state.selected_media} closeModal={this.closeModal} />
       </div>
     );
   }

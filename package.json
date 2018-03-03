@@ -5,6 +5,8 @@
   "dependencies": {
     "react": "^16.2.0",
     "react-dom": "^16.2.0",
+    "react-image-lightbox": "^4.5.0",
+    "react-responsive-modal": "^2.0.1",
     "react-scripts": "0.9.5",
     "semantic-ui-css": "^2.3.0",
     "semantic-ui-react": "^0.78.2"
